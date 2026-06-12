@@ -28,14 +28,21 @@ def text(m):
         return ' '.join(b.get('text', '') for b in c if isinstance(b, dict))
     return str(c)
 
+FALLBACK_MODEL = 'claude-opus-4-8'   # Fable 路由的回退目标；用 --fallback-model 改成你的
+
 def is_routing(o):
-    """一条记录是否代表「被路由 / 被拦」。两种情况都覆盖："""
-    # ① switchModelsOnFlag=true：静默路由，留 system 事件
+    """一条记录是否代表「被路由 / 被拦」。三种情况都覆盖："""
+    # ① switchModelsOnFlag=true 的初次路由：留 model_refusal_fallback 事件
     if o.get('type') == 'system' and o.get('subtype') == 'model_refusal_fallback':
         return True
-    # ② switchModelsOnFlag=false：当面 API Error（synthetic assistant 消息）
     if o.get('type') == 'assistant':
-        t = text(o.get('message', {}))
+        m = o.get('message', {})
+        # ② silent / sticky 路由：回复的 model 已经是回退模型，且不再留事件
+        #    （你这个会话本该跑 Fable，回复却由回退模型给出 = 被路由）
+        if m.get('model') == FALLBACK_MODEL:
+            return True
+        # ③ switchModelsOnFlag=false：当面 API Error
+        t = text(m)
         if 'safety measures' in t and 'Fable' in t:
             return True
     return False
@@ -131,9 +138,13 @@ def main():
     ap.add_argument('--max-forks', type=int, default=3, help='档3 防循环上限')
     ap.add_argument('--restart-cmd', default=None,
                     help='档3 自动清雷后执行的 kill+revive 命令（按你的运行方式填，见教程）')
+    ap.add_argument('--fallback-model', default='claude-opus-4-8',
+                    help='Fable 路由的回退模型；回复 model 等于它即视为被路由（silent 路由也能抓）')
     ap.add_argument('--once', action='store_true', help='只扫一遍就退出（自检用）')
     ap.add_argument('--do-fork', metavar='SESSION', help='对指定会话手动清雷')
     args = ap.parse_args()
+    global FALLBACK_MODEL
+    FALLBACK_MODEL = args.fallback_model
 
     if args.do_fork:
         do_fork(args.do_fork); return

@@ -136,10 +136,11 @@ python3 fable-guard.py --tier 3     # 提醒 + 自动清雷（带备份 + 防循
 python3 fable-guard.py --once       # 只扫一遍当前会话（自检用）
 ```
 
-**它怎么判定「被路由/拦截」**（两种配置都覆盖）：
+**它怎么判定「被路由/拦截」**（三种情况都覆盖）：
 
-- `switchModelsOnFlag: true`：找 `model_refusal_fallback` 系统事件；
-- `switchModelsOnFlag: false`：找含 *"safety measures … Fable"* 的 API Error 消息。
+- `model_refusal_fallback` 系统事件（switchModelsOnFlag=true 的**初次**路由会留）；
+- 回复的 `model` 字段等于回退模型（`--fallback-model`，默认 `claude-opus-4-8`）——**这条最关键**：sticky 之后的 silent 路由**不再留事件**，只能靠 model 字段抓；
+- 含 *"safety measures … Fable"* 的 API Error 消息（switchModelsOnFlag=false 时）。
 
 **「清雷」的核心技术（实测有效）**——不是去改 `parentUuid` 做中段手术（脆且危险），而是**从「第一条未解决的路由/拦截」对应的触发消息处，把它及之后所有行整段截掉，再 `resume` 同一个 session**。它之后的轮次反正全是被 4.8 污染或报错的废轮，连同那条雷一起清掉正好。核心就这几行：
 

@@ -121,9 +121,49 @@ print(f"\n共 {n} 次路由。" if n else "\n✅ 全程没被路由，都是真 
 - **档 2 · 提醒 + 手动一键**：你确认后，自动「删掉触发那条 + 开新会话续上下文」；
 - **档 3 · 全自动**：收到 Error 就自动清雷重开（建议带备份 + 防循环，毕竟在动会话历史）。
 
+下一节给出三档的**可跑实现**。
+
 ---
 
-## 5. 一页收尾
+## 5. 三档实现：`fable-guard.py`（已实测）
+
+把上面三档落成一个工具。配套设 `switchModelsOnFlag: false`，让撞雷变成可检测的 Error。**完整脚本在本仓库 [`fable-guard.py`](fable-guard.py)**，用法：
+
+```bash
+python3 fable-guard.py --tier 1     # 只提醒
+python3 fable-guard.py --tier 2     # 提醒 + 给你一条「一键清雷」命令
+python3 fable-guard.py --tier 3     # 提醒 + 自动清雷（带备份 + 防循环 --max-forks）
+python3 fable-guard.py --once       # 只扫一遍当前会话（自检用）
+```
+
+**它怎么判定「被路由/拦截」**（两种配置都覆盖）：
+
+- `switchModelsOnFlag: true`：找 `model_refusal_fallback` 系统事件；
+- `switchModelsOnFlag: false`：找含 *"safety measures … Fable"* 的 API Error 消息。
+
+**「清雷」的核心技术（实测有效）**——不是去改 `parentUuid` 做中段手术（脆且危险），而是**从「第一条未解决的路由/拦截」对应的触发消息处，把它及之后所有行整段截掉，再 `resume` 同一个 session**。它之后的轮次反正全是被 4.8 污染或报错的废轮，连同那条雷一起清掉正好。核心就这几行：
+
+```python
+def fork(path, cut_raw_line):
+    bak = f"{path}.bak.{int(time.time())}"
+    shutil.copy(path, bak)                       # 先备份，绝不直接动原文件
+    raw = open(path, encoding='utf-8').readlines()
+    open(path, 'w', encoding='utf-8').writelines(raw[:cut_raw_line])  # 截到触发那条之前
+    return bak
+```
+
+**实测结果**：截断后 `resume`，**上下文完整保留**（它还记得我在被截那条之前说过的事），**且回到真 `claude-fable-5`**。
+
+**诚实的边界（务必读）：**
+
+1. **`resume` 这一步跟你的运行方式有关**。手动场景脚本会打印 `claude --resume <sid> --model claude-fable-5` 让你接着跑；tmux/守护场景需要你自己 kill 旧会话再用这条重启（脚本不替你猜你的启动参数）。
+2. **它在动会话历史，每次都先备份**（`*.bak.*`）。档 3 默认 `--max-forks 3` 防止「清了又触发、无限重开」。
+3. **transcript 格式可能随 Claude Code 版本变**。本脚本在写作时的版本实测通过；换版本先用 `--once` 自检、并保留备份。
+4. **档 2 其实有更省事的原生版**：设 `switchModelsOnFlag: false` 后，撞雷时直接**双击 esc 编辑/删掉上一条消息**——这是 Claude Code 自带的「清雷」，零代码零风险。`fable-guard.py` 的价值在「自动化/无人值守、看不到界面」的场景。
+
+---
+
+## 6. 一页收尾
 
 ```
 路由怎么来：  你的消息 ─▶ [话题分类器：在不在 网安/生化/蒸馏 区?(概率、边界糊)] ─中─▶ Opus 4.8

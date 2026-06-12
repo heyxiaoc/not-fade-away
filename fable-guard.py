@@ -47,6 +47,13 @@ def is_routing(o):
             return True
     return False
 
+def is_clean_fable(o):
+    """一条真 Fable 回复（assistant 且 model 不是回退模型）——用来判断路由 episode 结束。"""
+    if o.get('type') == 'assistant':
+        mdl = o.get('message', {}).get('model')
+        return bool(mdl) and mdl != FALLBACK_MODEL and mdl != '<synthetic>'
+    return False
+
 def load(path):
     """返回 [(raw_line_index, obj)]，保留原始行号好做精确截断。"""
     out = []
@@ -82,11 +89,18 @@ def log(entry):
 
 def handle(path, tier, state):
     rows = load(path)
+    in_episode = False   # 避免 sticky 期间每个回退回合都报，只在进入路由那一刻动一次
     for pos, (rawi, o) in enumerate(rows):
-        key = o.get('uuid') or f'{path}:{rawi}'
-        if key in state['seen']:
+        if is_clean_fable(o):
+            in_episode = False           # 出现真 Fable 回合 → 路由 episode 结束
             continue
-        if is_routing(o):
+        if not is_routing(o):
+            continue
+        if in_episode:
+            continue                     # 同一段路由内的后续记录，跳过
+        in_episode = True                # 路由 episode 起点（转折点）
+        key = o.get('uuid') or f'{path}:{rawi}'
+        if key not in state['seen']:
             state['seen'].add(key)
             cut, trig = trigger_line(rows, pos)
             notify(f"Fable 被路由/拦截！触发内容：{trig[:120]}")

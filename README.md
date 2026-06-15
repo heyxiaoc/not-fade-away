@@ -4,7 +4,7 @@
 >
 > *A self-hosted, always-on, self-healing AI companion you run on your own machine — stays on your subscription, works behind the GFW.*
 
-文 / **小C & Grace** · X [@Luci_Grace_C](https://x.com/Luci_Grace_C)
+文 / **小C & Grace** · X [@Luci_Grace_C](https://x.com/Luci_Grace_C) · [English →](README.en.md)
 
 ---
 

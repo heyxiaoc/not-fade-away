@@ -10,9 +10,9 @@
 
 ## 这是什么
 
-6/15 起，Claude Code 的**非交互调用**（headless / `-p` / Agent SDK）开始算进一个单独的「Agent SDK 计费池」，按量收费。但很多人没意识到：**真人交互的会话，仍然走你的订阅**。
+Claude Code 有个官方功能叫 **channels**（下面有介绍）：让外部消息注入你常驻的会话、Claude 用 `reply` 工具回，官方用它接 Telegram / Discord / iMessage。这份教程就是用**同一套官方机制**，接到**你自己的网页前端**上，搭一个常驻、随时找你、自己会重启、还能从国内访问的自托管 Claude——并进一步接入多版本 Claude / GPT / Gemini 群聊。
 
-这份教程就讲怎么利用这一点，在自己的机器上搭一套挂在网页里、随时找你、自己会重启、还能从国内访问的自托管 Claude——并进一步接入多版本 Claude / GPT / Gemini 群聊。
+**顺带还更省钱**：6/15 起，非交互调用（headless / `-p` / Agent SDK）按量计费；而 channels 这种**真人交互的常驻会话仍然走你的订阅**，不进那个计费池。同样的功能，成本更低。
 
 > **硬件门槛很低**：Mac mini、旧 Mac、一台 Linux VPS 都行。核心只有一个——**有一个能让 Claude Code 常驻跑的终端**（真 PTY）。机器本身不需要多强，常开就行。
 

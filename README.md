@@ -16,6 +16,17 @@
 
 > **硬件门槛很低**：Mac mini、旧 Mac、一台 Linux VPS 都行。核心只有一个——**有一个能让 Claude Code 常驻跑的终端**（真 PTY）。机器本身不需要多强，常开就行。
 
+## 🔌 底层能力：Claude Code Channels
+
+这套东西不是 hack 出来的——它建立在 Claude Code 官方的 **channels** 功能上。简单说：用 `--channels` 开启后，一个插件式 MCP 架构把**外部消息注入进你常驻的会话**，Claude 处理（能用你本地的文件系统 / git / MCP 工具），再用 `reply` / `react` 这类工具**把回复发回去**。官方内置支持 Telegram / Discord / iMessage 等——你从手机给本地 Claude 发消息、它带着完整本地环境干活再回你。
+
+官方在 research preview 里内置了 Telegram / Discord / iMessage 三个 channel 插件，还有个 `fakechat` 本地 demo。**而本教程做的「自己的网页前端」，本质就是一个自定义 channel**——把官方这套「消息注入 + reply」机制接到你自己的 UI 上，从而得到一个常驻、走订阅、随时找你的伴侣。先读懂官方 channels 功能，再看本教程会顺很多：
+
+> **官方文档** → <https://code.claude.com/docs/en/channels>
+> **自建 channel 参考**（本教程正是干这个）→ <https://code.claude.com/docs/en/channels-reference>
+>
+> 要点：channels 目前是 **research preview**，需要 Claude Code v2.1.80+、Bun 运行时、claude.ai 登录（**Pro/Max 个人用户可直接用**，按 session 用 `--channels` 开启）；消息发送方走 **sender allowlist** 鉴权；自定义 channel 用 `--dangerously-load-development-channels` 加载。会话必须保持常驻（关了终端 channel 就下线——这正是本教程「常驻 + 自愈」要解决的）。
+
 ## 两个版本
 
 | 版本 | 给谁看 | 内容 |

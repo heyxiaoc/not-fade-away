@@ -49,7 +49,7 @@
 - **多模型群聊** —— 多版本 Claude / GPT(codex) / Gemini(gemini-cli)，桥接 + 防 loop + 各自记忆人设
 - **远程访问** —— Cloudflare Tunnel + 源站锁定 + 应用层鉴权
 - **墙内可用** —— 资源自托管 + 体积瘦身 + Cloudflare 优选 IP
-- **成本清单 / 纯 VPS 变体 / 最小骨架 checklist**
+- **成本清单 / 纯 VPS 变体 / Windows（WSL2）变体 / 最小骨架 checklist**
 
 ## 一条提醒（你照着搭好、想再分享出去时）
 

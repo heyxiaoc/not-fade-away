@@ -43,7 +43,7 @@
 - **常驻不脆** —— detached tmux（真 PTY = 订阅计费 + 关窗不死）
 - **Channel plugin** —— 消息注入 + `reply` 工具，把会话接到网页
 - **Web 前端** —— WebSocket 实时双向 + 思考过程显示
-- **可靠性 / 自愈** —— health 看门狗 + 进程守护 + 自动登录 + N 实例互救
+- **可靠性 / 自愈** —— health 看门狗 + 进程守护 + 自动登录 + N 实例互救 + 本地文件防膨胀（定时清扫 + transcript 轮换）
 - **多模型群聊** —— 多版本 Claude / GPT(codex) / Gemini(gemini-cli)，桥接 + 防 loop + 各自记忆人设
 - **远程访问** —— Cloudflare Tunnel + 源站锁定 + 应用层鉴权
 - **墙内可用** —— 资源自托管 + 体积瘦身 + Cloudflare 优选 IP

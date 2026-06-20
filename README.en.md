@@ -28,7 +28,7 @@ Claude Code has an official feature called **channels** ([docs](https://code.cla
 - **Web frontend** — WebSocket two-way, optional thinking-trace view; fully self-hosted, slimmed for slow/lossy networks (zero external deps — self-host fonts/JS, precompile, compress).
 - **Self-healing** — health watchdog (curl `/health`, respawn) + process supervisor (launchd/systemd, `KeepAlive`+`RunAtLoad`) + **auto-login** (the most-forgotten link) + N-instance rescue mesh (N≥2 for production).
 - **File hygiene** — transcripts/buffers/backups grow unbounded (compaction shrinks the *context window*, not the file on disk → slow resume, runtime crashes). Mitigate with a scheduled cleanup (prune buffers, cap rolling history, drop old backups) + periodic transcript archive-and-fresh-session, with continuity carried by external memory.
-- **Multi-model group chat** — bridge sessions so they see each other; cap exchanges-per-turn to stop two autonomous agents from ping-ponging. GPT via `codex` CLI, Gemini via `gemini` CLI (each with its own memory/persona file).
+- **Multi-model group chat** — bridge sessions so they see each other; cap exchanges-per-turn to stop two autonomous agents from ping-ponging. GPT via `codex` CLI, Gemini via Google Antigravity's `agy` CLI (each with its own memory/persona file).
 - **Remote access** — Cloudflare Tunnel (no port-forward, no exposed home IP) + origin locked to Cloudflare + key-only SSH + app-layer auth.
 
 ## Runs on

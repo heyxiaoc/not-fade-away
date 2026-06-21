@@ -44,6 +44,7 @@ Claude Code has an official feature called **channels** ([docs](https://code.cla
 - [**人看版 (Human edition)**](人看版.md) — narrative + intuition, enough to build it yourself.
 - [**机看版 (Machine edition)**](机看版.md) — full spec (interfaces, fields, config templates); hand it to a Claude Code session to build from scratch. Chinese, but any CC reads it fine.
 - [**番外篇 (Field notes)**](番外篇-Fable不被偷换.md) — Fable 5 silent model-routing, reproduced & dissected. *(Note: Fable 5 / Mythos 5 globally paused since 2026-06-12 per a US export-control directive — kept as a mechanism archive.)*
+- [**Antigravity CLI side note**](antigravity-cli/) — after the legacy gemini CLI was retired, migrating the Gemini groupmate to Antigravity CLI (`agy`) to keep **subscription-tier Pro models** (no Flash downgrade, no metered billing) + a bonus Claude; plus digging the model's **thinking** out of agy's own transcript into the frontend, and native multi-turn memory. Chinese, but any CC reads it fine.
 
 ## License
 

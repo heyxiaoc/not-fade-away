@@ -16,6 +16,14 @@
 - ✅ **原生多轮记忆**：靠 `--conversation`，还能跨进程重启存活
 - ✅ 全程**只读它自己落盘的文件**——不抓屏、不用第三方代理、不碰私有后端接口
 
+## ⚠️ 重要 · 请用 Google 小号「尝鲜」，别用主力号
+
+这套是**尝鲜玩法**，不建议拿主力 Google 账号长期跑。**Google 官方对非交互 `-p`（脚本化 / 程序化调用）相当敏感**——把 `agy -p` 当后端长期挂着跑，有被判定为「用第三方软件 / 工具访问 Antigravity / Gemini CLI 登录」、违反服务条款的风险，可能导致**这个账号的 CLI / Code Assist 通道被禁用**（`agy` 报 `403 PERMISSION_DENIED · TOS_VIOLATION`；Google 账号本身可能不封、Gemini App 还能用，但 `agy` 就废了）。
+
+- ✅ **拿一个 Google 小号来「尝鲜」**，别绑你天天用的主力号。
+- ✅ **托底方案（零封号风险）：只用 Gemini、走官方 SDK** —— 用 `@google/generative-ai` SDK + 一个免费 [AI Studio](https://aistudio.google.com/apikey) API key（这是官方合规通道，用的是 API key、不是「第三方访问登录」）。代价是免费档只给 **Flash**（没 Pro / 没 Claude），但稳定、不怕封。只想要个能聊天的 Gemini 群友、不折腾 Pro 和养子 Claude 的话，直接走这条最省心。
+- ℹ️ 想要 Pro 又要长期稳：把上面那个 SDK 的 API key 升到**付费档**，一样官方合规、不碰封号红线。
+
 ## 两个版本
 
 | 文件 | 给谁看 |
@@ -37,6 +45,7 @@
 - 首轮 stdout 会混一行 `Warning: conversation … not found` → **按行过滤掉**
 - 紧池模型（Claude/GPT-OSS）会撞 429 → **默认主力放 Gemini**，或加自动降级兜底
 - 怕意外计费 → 把 `AI Credit Overages` 设成 `Never`
+- **怕封号 → 用 Google 小号尝鲜；要稳就走「只用 Gemini + 官方 SDK」托底**（详见上面的免责声明）
 
 —
 

@@ -3,7 +3,8 @@
 作者：**小C & Grace** · X @Luci_Grace_C · 协议：CC BY 4.0（随便转，署个名就行）
 本文所有结论都来自一次次真机实测，不是猜测。
 
-> ⚠️ **2026-06-12 状态说明**：Anthropic 应美国政府出口管制指令，**已全局暂停 Fable 5 / Mythos 5**（其它模型不受影响，官方称正努力恢复）。所以本篇讲的 Fable 路由现象**目前复现不了**——保留下来作为机制存档，等 Fable 恢复后再适用。官方公告：<https://www.anthropic.com/news/fable-mythos-access>
+> ⚠️ Fable 2026-07-01 回来了。
+> //**2026-06-12 状态说明**：Anthropic 应美国政府出口管制指令，**已全局暂停 Fable 5 / Mythos 5**（其它模型不受影响，官方称正努力恢复）。所以本篇讲的 Fable 路由现象**目前复现不了**——保留下来作为机制存档，等 Fable 恢复后再适用。官方公告：<https://www.anthropic.com/news/fable-mythos-access>
 
 ---
 

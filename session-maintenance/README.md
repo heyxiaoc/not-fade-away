@@ -34,7 +34,9 @@
 [`prune-transcript.py`](prune-transcript.py) 做的事：
 
 1. 找到**最后一个** `compact_boundary` 事件；
-2. 之前的行：`tool_result` 内容、`toolUseResult` 副本、`attachment` 正文、`queue-operation` 内容、thinking 正文和签名 → 全部换成 `"[pruned]"`（**类型保形**：字符串换字符串、列表换最小列表，解析器不炸）；
+2. 之前的行做**形状保持式深截断**（shape-preserving deep truncation）：递归遍历 `tool_result` 内容、`toolUseResult` 副本、`attachment`，**结构原样保留**（数组还是数组、每个 key 都在），只把超过 80 字符的长字符串换成 `"[pruned]"`；thinking 正文和签名同样截断；
+
+> ⚠ **为什么必须「形状保持」而不是「换成占位结构」（血泪版本史）**：本文初版是粗暴替换（整个 content 换成一个字符串/小 stub）。Claude Code ≤2.1.200 能容忍；**2.1.201 起，历史渲染器会对这些对象调 `.map`、读内部字段**，遇到被换掉的结构直接崩——会话每次回复都抛 `undefined is not an object (evaluating 'e.content.map')`，看起来活着，实际永远答不出话。深截断版在 2.1.201 上活体验证通过（resume + 多轮对话）。若你用过旧版剪刀且升级后会话哑掉：恢复 `_archive/` 里的 gzip 原件，或按新思路修复占位形状。
 3. 之后的行（活上下文）：**逐字节不动**；
 4. 人说的话和模型的回复文本，前后都**不碰**。
 
@@ -53,7 +55,7 @@ python3 prune-transcript.py ~/.claude/projects/<工作区slug>/<会话uuid>.json
 python3 prune-transcript.py ~/.claude/projects/<工作区slug>/<会话uuid>.jsonl
 ```
 
-实测：**37.0MB → 13.2MB（-64%）**，uuid 链 18675/18675 全保。
+实测：**37.0MB → 13.2MB（-64%）**，uuid 链 18675/18675 全保（深截断版在同一档上 23.4→14.5MB，比粗暴替换省得略少，换渲染器兼容，值）。
 
 **验证 resume 没坏**（第一次用强烈建议做）：把剪完的文件拷到一个新建工作区的 transcript 目录里，从那个目录 `claude --resume <uuid>`——能完整加载历史、正常到输入符，就是好的。全程不碰真会话：
 

@@ -37,16 +37,22 @@ import sys
 import time
 
 PLACEHOLDER = "[pruned]"
+TRUNC_LIMIT = 80  # 短字符串(type/id/日期等)原样保留;超过的才是要剪的肥肉
 
 
-def stub_like(v):
-    """Type-preserving minimal replacement (parsers keep their expected shape)."""
+def deep_trunc(v):
+    """Shape-preserving deep truncation: every structure stays EXACTLY as-is
+    (arrays stay arrays, every key survives) — only long strings become the
+    placeholder. This is the whole fix for claude ≥2.1.201: its history
+    renderer calls .map / reads fields on these objects, so replacing
+    structures with stubs (the old approach) crashes the session with
+    "undefined is not an object (evaluating 'e.content.map')"."""
     if isinstance(v, str):
-        return PLACEHOLDER
+        return v if len(v) <= TRUNC_LIMIT else PLACEHOLDER
     if isinstance(v, list):
-        return [{"type": "text", "text": PLACEHOLDER}]
+        return [deep_trunc(x) for x in v]
     if isinstance(v, dict):
-        return {"pruned": True}
+        return {k: deep_trunc(x) for k, x in v.items()}
     return v
 
 
@@ -59,9 +65,9 @@ def prune_event(e):
             for b in m["content"]:
                 if isinstance(b, dict) and b.get("type") == "tool_result":
                     if "content" in b:
-                        b["content"] = PLACEHOLDER
+                        b["content"] = deep_trunc(b["content"])
         if "toolUseResult" in e:
-            e["toolUseResult"] = stub_like(e["toolUseResult"])
+            e["toolUseResult"] = deep_trunc(e["toolUseResult"])
     elif t == "assistant":
         m = e.get("message")
         if isinstance(m, dict) and isinstance(m.get("content"), list):
@@ -74,9 +80,9 @@ def prune_event(e):
     elif t == "attachment":
         a = e.get("attachment")
         if isinstance(a, dict):
-            e["attachment"] = {"type": a.get("type", "pruned"), "pruned": True}
+            e["attachment"] = deep_trunc(a)
     elif t == "queue-operation":
-        if "content" in e:
+        if isinstance(e.get("content"), str) and len(e["content"]) > TRUNC_LIMIT:
             e["content"] = PLACEHOLDER
     return e
 

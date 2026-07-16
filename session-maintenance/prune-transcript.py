@@ -28,6 +28,10 @@ import time
 
 PLACEHOLDER = "[pruned]"
 TRUNC_LIMIT = 80  # 短字符串(type/id/日期等)原样保留;超过的才是要剪的肥肉
+# 图片 base64 不能剪成文字占位——compact/回放会把它原样发回 API,"[pruned]" 不是
+# 合法 base64 → 400 Invalid image_url(2026-07-16 小G /compact 事故)。换成合法的
+# 1×1 透明 PNG,API 校验通过,肥肉照样剪掉。
+TINY_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
 
 
 def deep_trunc(v):
@@ -38,12 +42,45 @@ def deep_trunc(v):
     structures with stubs (the old approach) crashes the session with
     "undefined is not an object (evaluating 'e.content.map')"."""
     if isinstance(v, str):
+        if v.startswith("data:image/") and len(v) > TRUNC_LIMIT:
+            return f"data:image/png;base64,{TINY_PNG_B64}"
         return v if len(v) <= TRUNC_LIMIT else PLACEHOLDER
     if isinstance(v, list):
         return [deep_trunc(x) for x in v]
     if isinstance(v, dict):
+        # Anthropic 图片块 {type:'base64', media_type:'image/*', data:<巨长>} →
+        # data 换 1×1 合法 PNG,不能用文字占位(见 TINY_PNG_B64 注释)
+        if (v.get("type") == "base64" and isinstance(v.get("data"), str)
+                and len(v["data"]) > TRUNC_LIMIT
+                and str(v.get("media_type", "")).startswith("image/")):
+            return {**v, "media_type": "image/png", "data": TINY_PNG_B64}
+        # claude 附件格式 {base64:<巨长>, type:'image/*', ...}(channel 图片注入)
+        if (isinstance(v.get("base64"), str) and len(v["base64"]) > TRUNC_LIMIT
+                and str(v.get("type", "")).startswith("image/")):
+            return {**v, "type": "image/png", "base64": TINY_PNG_B64}
         return {k: deep_trunc(x) for k, x in v.items()}
     return v
+
+
+IMG_NOTE = "[图片已省略以节省上下文]"
+
+
+def strip_tool_result_images(node):
+    """Replace image blocks INSIDE tool results with a text placeholder.
+    Why not just shrink the base64 (deep_trunc does that): a GPT-brained
+    instance (小G, via CLIProxyAPI) can't /compact when history contains
+    tool-result images — the proxy mis-converts Anthropic tool_result images
+    into OpenAI `output[].image_url` and the endpoint 400s (2026-07-16). Even
+    a valid 1×1 png in that slot fails; the structure itself is the problem.
+    Turning them into text sidesteps the conversion entirely. Standalone
+    (non-tool-result) images in her/his messages are left to deep_trunc."""
+    if isinstance(node, dict):
+        if node.get("type") == "image":
+            return {"type": "text", "text": IMG_NOTE}
+        return {k: strip_tool_result_images(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [strip_tool_result_images(x) for x in node]
+    return node
 
 
 def prune_event(e):
@@ -55,9 +92,10 @@ def prune_event(e):
             for b in m["content"]:
                 if isinstance(b, dict) and b.get("type") == "tool_result":
                     if "content" in b:
-                        b["content"] = deep_trunc(b["content"])
+                        # 先把工具结果里的图换成文字(compact 兼容),再深截断其余肥肉
+                        b["content"] = deep_trunc(strip_tool_result_images(b["content"]))
         if "toolUseResult" in e:
-            e["toolUseResult"] = deep_trunc(e["toolUseResult"])
+            e["toolUseResult"] = deep_trunc(strip_tool_result_images(e["toolUseResult"]))
     elif t == "assistant":
         m = e.get("message")
         if isinstance(m, dict) and isinstance(m.get("content"), list):

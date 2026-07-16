@@ -1,34 +1,24 @@
 #!/usr/bin/env python3
 # prune-transcript.py <transcript.jsonl> [--dry-run]
 #
-# Shrink a long-running Claude Code session transcript WITHOUT breaking
-# `claude --resume`.
-#
-# Why this works: after each in-session compaction, claude rebuilds the live
-# context from the LAST compact summary + everything after it. Everything
-# before that boundary is dead weight for resuming — it only bloats the file
-# and slows session load. But you can't delete those lines either: events form
-# a uuid/parentUuid chain that must stay intact. So we keep EVERY line and
-# only truncate the bulky CONTENT of pre-boundary events:
+# Shrink a luci-web claude session transcript WITHOUT breaking --resume.
+# Everything before the LAST compact boundary is dead weight for the live
+# context (claude rebuilds context from the last compact summary + tail), but
+# it still bloats the file and slows session load. We keep every line and its
+# uuid/parentUuid chain intact, and only truncate the bulky CONTENT of
+# pre-boundary events:
 #   - user.message.content[].tool_result content  -> "[pruned]"
-#   - top-level toolUseResult (a full duplicate!)  -> type-preserving stub
+#   - top-level toolUseResult                     -> type-preserving stub
 #   - attachment.*                                -> {type, pruned:true}
 #   - queue-operation content                     -> "[pruned]"
 #   - assistant thinking blocks (text+signature)  -> "[pruned]" / ""
-# Human messages and the assistant's replies (text blocks) are NOT touched,
-# and everything at/after the last compact boundary is byte-identical.
-#
-# Measured on a real 37MB companion-session transcript: 37.0MB -> 13.2MB.
+# Her words and cc's replies (text blocks) are NOT touched.
 #
 # Safety: the ORIGINAL is gzipped into _archive/<name>.pre-prune-<ts>.jsonl.gz
 # BEFORE any rewrite (full history preserved). The rewrite goes to a temp file
 # and replaces the original atomically only if every line re-parses as JSON and
 # the line count matches. On ANY error the original is left untouched.
-#
-# ⚠ Run this ONLY while the session is STOPPED (claude not running on it).
-# ⚠ The transcript format is internal to Claude Code and may change between
-#   versions — always try --dry-run first, keep the gz archives around, and
-#   verify --resume works after your first prune.
+# Run this ONLY while the instance is stopped (start.sh restart path).
 import gzip
 import json
 import os
@@ -101,22 +91,30 @@ def main():
         try:
             events.append(json.loads(ln))
         except Exception:
-            events.append(None)  # kept byte-identical later
+            events.append(None)  # keep byte-identical later
 
-    # locate the LAST compact boundary
+    # locate LAST compact boundary
     last_boundary = -1
     for i, e in enumerate(events):
         if isinstance(e, dict) and e.get("type") == "system" and e.get("subtype") == "compact_boundary":
             last_boundary = i
     if last_boundary <= 0:
-        print(f"no compact boundary — nothing to prune ({len(raw_lines)} lines)"); return
+        # 无边界兜底(2026-07-16):从未 compact 过的会话(如常驻代理会话)没有边界,
+        # 老逻辑直接放弃 → transcript 只涨不减 → 维护系统陷入"超限→重启→没剪动→
+        # 下小时再来"的死循环。改为:保最后 TAIL_KEEP 行原样(远大于 resume 真正
+        # 载入上下文的量),更早的行照样做形状保持深截断。她的话和回复文本永远不动。
+        TAIL_KEEP = 400
+        if len(events) <= TAIL_KEEP + 100:
+            print(f"no compact boundary & only {len(raw_lines)} lines — nothing to prune"); return
+        last_boundary = len(events) - TAIL_KEEP
+        print(f"no compact boundary — fallback: keep last {TAIL_KEEP} lines intact, prune the rest")
 
     before = os.path.getsize(path)
     out_lines = []
     pruned_n = 0
     for i, (ln, e) in enumerate(zip(raw_lines, events)):
         if e is None or i >= last_boundary:
-            out_lines.append(ln)  # tail + unparsable lines: byte-identical
+            out_lines.append(ln)  # tail + unparsable: byte-identical
             continue
         prune_event(e)
         pruned_n += 1
@@ -124,9 +122,9 @@ def main():
 
     if len(out_lines) != len(raw_lines):
         print("line count mismatch — abort, original untouched"); sys.exit(1)
-    # validate every output line re-parses — abort before touching the original
+    # validate every output line re-parses
     for ln in out_lines:
-        json.loads(ln)
+        json.loads(ln)  # raises -> abort before touching original
 
     after = sum(len(l) for l in out_lines)
     print(f"{before/1048576:.1f}MB -> {after/1048576:.1f}MB "
@@ -134,7 +132,7 @@ def main():
     if dry:
         print("dry-run: original untouched"); return
 
-    # archive the original (gzip) BEFORE rewrite — full history preserved
+    # archive original (gzip) BEFORE rewrite — full history preserved
     adir = os.path.join(os.path.dirname(path), "_archive")
     os.makedirs(adir, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
